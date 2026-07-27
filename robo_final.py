@@ -68,6 +68,7 @@ def gerar_titulo(bicho, abordagem):
         f"O foco do título deve ser estritamente trazer {abordagem}. Não use clichês repetitivos. "
         f"Escreva em texto puro, sem aspas. Modificador único: {token_anti_cache}."
     )
+    # CORRIGIDO: Nome do parâmetro alterado de temperature para temperatura
     return pedir_ia_groq(prompt, temperatura=1.0).replace('"', '').strip()
 
 def gerar_artigo_cuidados(bicho, abordagem):
@@ -91,7 +92,8 @@ def gerar_artigo_cuidados(bicho, abordagem):
     E escreva DOIS parágrafos grandes, no estilo de um diário pessoal e muito bem-humorado, contando uma trapalhada inédita que aconteceu com a Brunilda e/ou com o Thor em sua casa. 
     Chave de variação da história: {id_historia}. Crie uma narrativa completamente nova e mude a forma de começar para não repetir postagens antigas.
     """
-    artigo = pedir_ia_groq(prompt, temperature=1.0)
+    # CORRIGIDO: Nome do parâmetro alterado de temperature para temperatura
+    artigo = pedir_ia_groq(prompt, temperatura=1.0)
     if artigo.startswith("```"):
         artigo = artigo.strip("`").replace("html\n", "", 1)
     return artigo
