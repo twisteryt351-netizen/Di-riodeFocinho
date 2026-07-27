@@ -27,7 +27,6 @@ for nome, valor in [
 groq_client = Groq(api_key=GROQ_API_KEY)
 MODELO_IA = "llama-3.3-70b-versatile"
 
-# --- RODÍZIO DE BICHOS EXPANDIDO ---
 BICHOS = [
     {"nome": "Cachorro", "img": "dog pet care"},
     {"nome": "Gato", "img": "cat pet care"},
@@ -47,25 +46,23 @@ BICHOS = [
     {"nome": "Rato Twister (Mecol)", "img": "pet rat care"}
 ]
 
-# --- ABORDAGENS VARIADAS ---
 ABORDAGENS = [
     "uma dica de cuidado prático e essencial",
     "uma curiosidade fascinante e pouco conhecida",
-    "um fato histórico marcante sobre a origem da relação deles com os humanos",
+    "um fato histórico marcante sobre a relação deles com os humanos",
     "um conto ou lenda antiga cativante envolvendo este animal"
 ]
 
 def proximo_bicho():
-    """Usa o dia do ano corrente para garantir rotação exata a cada 24h."""
-    dia_do_ano = datetime.now().timetuple().tm_yday
-    indice_bicho = dia_do_ano % len(BICHOS)
-    return BICHOS[indice_bicho]
+    # Alterna o bicho a cada minuto para testes em tempo real
+    agora = datetime.now()
+    semente = agora.minute + agora.second
+    return BICHOS[semente % len(BICHOS)]
 
 def obter_abordagem_do_dia():
-    """Usa o dia do ano combinado com um fator aleatório para variar o estilo do texto."""
-    dia_do_ano = datetime.now().timetuple().tm_yday
-    indice_abordagem = (dia_do_ano + random.randint(1, 50)) % len(ABORDAGENS)
-    return ABORDAGENS[indice_abordagem]
+    agora = datetime.now()
+    semente = agora.hour + agora.minute + random.randint(1, 100)
+    return ABORDAGENS[semente % len(ABORDAGENS)]
 
 IMAGEM_PADRAO = "https://wikimedia.org"
 
@@ -83,7 +80,6 @@ def buscar_imagem_openverse(palavra_chave):
             timeout=10,
         )
         resultados = resposta.json().get("results", [])
-        # FIX: Acessa o índice [0] da lista antes de buscar a propriedade 'url'
         return resultados[0]["url"] if resultados else IMAGEM_PADRAO
     except Exception as e:
         print(f"⚠️ Erro ao buscar imagem: {e}")
@@ -92,25 +88,25 @@ def buscar_imagem_openverse(palavra_chave):
 def gerar_tabela_imagem_blogger(url_img, alt_title):
     return f'''<table align="center" cellpadding="0" cellspacing="0" class="tr-caption-container" style="margin-left: auto; margin-right: auto;"><tbody><tr><td style="text-align: center;"><img alt="{alt_title}" border="0" height="360" src="{url_img}" title="{alt_title}" width="640" /></td></tr></tbody></table><br />'''
 
-def pedir_ia_groq(prompt, temperatura=0.75):
+def pedir_ia_groq(prompt, temperatura=0.9):
     response = groq_client.chat.completions.create(
         messages=[{"role": "user", "content": prompt}],
         model=MODELO_IA,
         temperature=temperatura,
     )
-    # FIX CORRIGIDO: Adicionado o [0] que faltava para acessar a mensagem na API da Groq
     return response.choices[0].message.content.strip()
 
 def gerar_titulo(bicho, abordagem):
-    token_variacao = random.randint(1000, 9999)
+    token_anti_cache = random.randint(10000, 99999)
     prompt = (
-        f"Crie um título inédito, chamativo e criativo de blog focado em SEO em português do Brasil, sem aspas, sobre o animal: {bicho}. "
-        f"O foco do artigo deve ser trazer {abordagem}. Código verificador único: {token_variacao}. "
-        f"Não use frases repetidas. Escreva apenas o título final em formato texto puro."
+        f"Gere um título único de blog em português do Brasil focado em SEO para o bicho: {bicho}. "
+        f"O tema central deve ser obrigatoriamente {abordagem}. Não use palavras genéricas ou repetidas. "
+        f"Escreva estritamente em formato de texto puro e sem aspas externas. ID único: {token_anti_cache}."
     )
-    return pedir_ia_groq(prompt, temperatura=0.85).replace('"', '').strip()
+    return pedir_ia_groq(prompt, temperatura=0.95).replace('"', '').strip()
 
 def gerar_artigo_cuidados(bicho, abordagem):
+    id_historia = random.randint(1, 1000)
     prompt = f"""
     Você é o autor de um blog de pets muito querido pelos leitores. Sua persona: uma pessoa
     caseira, carinhosa e cuidadosa, que ama animais e adora conversar com seus leitores. Você tem uma gata
@@ -118,7 +114,7 @@ def gerar_artigo_cuidados(bicho, abordagem):
 
     Escreva um artigo COMPLETO, profundo e otimizado para SEO sobre {bicho}, desenvolvendo especificamente {abordagem}.
 
-    REGRAS DE FORMATO (HTML puro, sem Markdown, sem blocos de código como ```html):
+    REGRAS DE FORMATO (HTML puro, sem Markdown, sem blocos de código markdown como ```html):
     1. Um parágrafo de abertura (<p>) caloroso e envolvendo o leitor, introduzindo o animal e o tema de hoje ({abordagem}) com muito afeto.
     2. NO MÍNIMO 4 subtítulos <h2> desenvolvendo detalhadamente o assunto abordado de maneira criativa.
     3. Inclua detalhes práticos, fatos interessantes e específicos (não genéricos) sobre {bicho}.
@@ -128,14 +124,15 @@ def gerar_artigo_cuidados(bicho, abordagem):
 
     Ao final do texto, adicione obrigatoriamente a transição:
     <h2>Um Pouquinho do Meu Dia a Dia</h2> 
-    E escreva DOIS parágrafos grandes, no estilo de um diário pessoal e muito bem-humorado, contando uma trapalhada inédita que aconteceu com a Brunilda e/ou com o Thor em sua casa.
+    E escreva DOIS parágrafos grandes, no estilo de um diário pessoal e muito bem-humorado, contando uma trapalhada inédita que aconteceu com a Brunilda e/ou com o Thor em sua casa. 
+    Identificador da história: {id_historia}. Mude totalmente a narrativa e a abordagem da introdução da história para evitar repetições.
     """
-    artigo = pedir_ia_groq(prompt, temperature=0.9)
+    artigo = pedir_ia_groq(prompt, temperatura=0.95)
     if artigo.startswith("```"):
         artigo = artigo.strip("`").replace("html\n", "", 1)
     return artigo
 
-def obtener_credenciais():
+def obter_credenciais():
     creds = Credentials(
         token=None,
         refresh_token=REFRESH_TOKEN,
@@ -147,7 +144,7 @@ def obtener_credenciais():
     return creds
 
 def publicar_no_blogger(titulo, conteudo):
-    creds = obtener_credenciais()
+    creds = obter_credenciais()
     blogger = build('blogger', 'v3', credentials=creds)
     corpo_postagem = {'kind': 'blogger#post', 'title': titulo, 'content': conteudo}
     resultado = blogger.posts().insert(blogId=BLOGGER_ID, body=corpo_postagem).execute()
