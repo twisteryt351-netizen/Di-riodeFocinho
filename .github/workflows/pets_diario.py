@@ -28,22 +28,22 @@ groq_client = Groq(api_key=GROQ_API_KEY)
 MODELO_IA = "llama-3.3-70b-versatile"
 
 BICHOS = [
-    {"nome": "Cachorro", "img": "dog pet care"},
-    {"nome": "Gato", "img": "cat pet care"},
-    {"nome": "Papagaio", "img": "parrot bird pet"},
-    {"nome": "Calopsita", "img": "cockatiel bird pet"},
-    {"nome": "Hamster", "img": "hamster pet care"},
-    {"nome": "Coelho", "img": "rabbit pet care"},
-    {"nome": "Peixe de aquário", "img": "aquarium fish pet"},
-    {"nome": "Tartaruga", "img": "turtle pet care"},
-    {"nome": "Periquito", "img": "parakeet bird pet"},
-    {"nome": "Porquinho-da-índia", "img": "guinea pig pet"},
-    {"nome": "Ferret (Furão)", "img": "ferret pet"},
-    {"nome": "Chinchila", "img": "chinchila pet"},
-    {"nome": "Canário", "img": "canary bird pet"},
-    {"nome": "Pogona (Dragão-barbudo)", "img": "bearded dragon pet"},
-    {"nome": "Gato Persa", "img": "persian cat pet"},
-    {"nome": "Rato Twister (Mecol)", "img": "pet rat care"}
+    {"nome": "Cachorro"},
+    {"nome": "Gato"},
+    {"nome": "Papagaio"},
+    {"nome": "Calopsita"},
+    {"nome": "Hamster"},
+    {"nome": "Coelho"},
+    {"nome": "Peixe de aquário"},
+    {"nome": "Tartaruga"},
+    {"nome": "Periquito"},
+    {"nome": "Porquinho-da-índia"},
+    {"nome": "Ferret (Furão)"},
+    {"nome": "Chinchila"},
+    {"nome": "Canário"},
+    {"nome": "Pogona (Dragão-barbudo)"},
+    {"nome": "Gato Persa"},
+    {"nome": "Rato Twister (Mecol)"}
 ]
 
 ABORDAGENS = [
@@ -63,32 +63,8 @@ def obter_abordagem_do_dia():
     semente = agora.hour + agora.minute + random.randint(1, 999)
     return ABORDAGENS[semente % len(ABORDAGENS)]
 
+# Imagem temporária e segura enquanto configuramos o seu Cloudflare
 IMAGEM_PADRAO = "https://wikimedia.org"
-
-def buscar_imagem_openverse(palavra_chave):
-    try:
-        resposta = requests.get(
-            "https://openverse.org",
-            params={
-                "q": palavra_chave,
-                "license_type": "commercial",
-                "page_size": 3,
-                "mature": "false",
-            },
-            headers={"User-Agent": "RoboPets/1.0"},
-            timeout=5,
-        )
-        # Proteção: só tenta ler o JSON se o site responder com sucesso (Status 200)
-        if resposta.status_code == 200:
-            dados = resposta.json()
-            resultados = dados.get("results", [])
-            if resultados and isinstance(resultados, list):
-                # Pega a URL do primeiro resultado de forma segura
-                return resultados[0].get("url", IMAGEM_PADRAO)
-        return IMAGEM_PADRAO
-    except Exception as e:
-        print(f"⚠️ Erro ao buscar imagem (usando padrão): {e}")
-        return IMAGEM_PADRAO
 
 def gerar_tabela_imagem_blogger(url_img, alt_title):
     return f'''<table align="center" cellpadding="0" cellspacing="0" class="tr-caption-container" style="margin-left: auto; margin-right: auto;"><tbody><tr><td style="text-align: center;"><img alt="{alt_title}" border="0" height="360" src="{url_img}" title="{alt_title}" width="640" /></td></tr></tbody></table><br />'''
@@ -114,7 +90,7 @@ def gerar_artigo_cuidados(bicho, abordagem):
     id_historia = random.randint(1000, 9999)
     prompt = f"""
     Você é o autor de um blog de pets muito querido pelos leitores. Sua persona: uma pessoa
-    caseira, carinhosa e cuidadosa, que ama animais e adora conversar with seus leitores. Você tem uma gata
+    caseira, carinhosa e cuidadosa, que ama animais e adora conversar com seus leitores. Você tem uma gata
     siamesa chamada Brunilda e um golden retriever chamado Thor.
 
     Escreva um artigo COMPLETO, profundo e otimizado para SEO sobre {bicho}, desenvolvendo especificamente {abordagem}.
@@ -165,8 +141,7 @@ if __name__ == "__main__":
 
     titulo = gerar_titulo(bicho_do_dia['nome'], abordagem_do_dia)
     corpo = gerar_artigo_cuidados(bicho_do_dia['nome'], abordagem_do_dia)
-    img_url = buscar_imagem_openverse(bicho_do_dia['img'])
-    img_html = gerar_tabela_imagem_blogger(img_url, titulo)
+    img_html = gerar_tabela_imagem_blogger(IMAGEM_PADRAO, titulo)
 
     aviso = (
         '<br /><hr /><p style="font-size: 12px; color: #888; font-style: italic;">Este conteúdo é '
