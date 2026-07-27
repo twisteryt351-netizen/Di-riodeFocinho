@@ -2,7 +2,7 @@ name: Robo de Cuidados com Pets
 
 on:
   schedule:
-    - cron: '0 12 * * *'  # Executará 1 vez por dia de forma 100% automática às 09:00 BRT
+    - cron: '0 12 * * *'
   workflow_dispatch:
 
 jobs:
@@ -15,14 +15,10 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Instalar dependencias oficiais
-        run: pip install requests groq google-auth
+      - name: Instalar dependencias limpas
+        run: pip install groq
 
       - name: Executar script correto
         run: python robo_final.py
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          BLOGGER_ID_PETS: ${{ secrets.BLOGGER_ID_PETS }}
-          BLOGGER_CLIENT_ID: ${{ secrets.BLOGGER_CLIENT_ID }}
-          BLOGGER_CLIENT_SECRET: ${{ secrets.BLOGGER_CLIENT_SECRET }}
-          BLOGGER_REFRESH_TOKEN: ${{ secrets.BLOGGER_REFRESH_TOKEN }}
