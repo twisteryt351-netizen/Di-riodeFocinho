@@ -3,20 +3,22 @@ import requests
 import random
 from datetime import datetime
 from groq import Groq
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
 
 # --- CONFIGURAÇÕES ---
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 BLOGGER_ID = os.environ.get("BLOGGER_ID_PETS")
-REFRESH_TOKEN = os.environ.get("BLOGGER_REFRESH_TOKEN")
 CLIENT_ID = os.environ.get("BLOGGER_CLIENT_ID")
 CLIENT_SECRET = os.environ.get("BLOGGER_CLIENT_SECRET")
+REFRESH_TOKEN = os.environ.get("BLOGGER_REFRESH_TOKEN")
 
 for nome, valor in [
     ("GROQ_API_KEY", GROQ_API_KEY),
     ("BLOGGER_ID_PETS", BLOGGER_ID),
-    ("REFRESH_TOKEN", REFRESH_TOKEN),
     ("BLOGGER_CLIENT_ID", CLIENT_ID),
-    ("CLIENT_SECRET", CLIENT_SECRET),
+    ("BLOGGER_CLIENT_SECRET", CLIENT_SECRET),
+    ("BLOGGER_REFRESH_TOKEN", REFRESH_TOKEN),
 ]:
     if not valor:
         raise ValueError(f"Faltou configurar a variável/segredo: {nome}")
@@ -71,7 +73,7 @@ def pedir_ia_groq(prompt, temperatura=1.0):
         model=MODELO_IA,
         temperature=temperatura,
     )
-    # CORREÇÃO CRUCIAL DA LISTA CHOICES:
+    # CORRIGIDO DEFINITIVAMENTE COM O ÍNDICE DA LISTA:
     return response.choices[0].message.content.strip()
 
 def gerar_titulo(bicho, abordagem):
@@ -109,21 +111,20 @@ def gerar_artigo_cuidados(bicho, abordagem):
         artigo = artigo.strip("`").replace("html\n", "", 1)
     return artigo
 
-def obter_access_token_google():
-    url = "https://googleapis.com"
-    payload = {
-        "client_id": CLIENT_ID.strip(),
-        "client_secret": CLIENT_SECRET.strip(),
-        "refresh_token": REFRESH_TOKEN.strip(),
-        "grant_type": "refresh_token"
-    }
-    resposta = requests.post(url, data=payload, timeout=10)
-    if resposta.status_code == 200:
-        return resposta.json().get("access_token")
-    raise Exception(f"Falha ao renovar token OAuth2: {resposta.text}")
+def obter_access_token_oficial():
+    """Usa a biblioteca original do Google que rodava perfeitamente no seu primeiro script."""
+    creds = Credentials(
+        token=None,
+        refresh_token=REFRESH_TOKEN,
+        client_id=CLIENT_ID,
+        client_secret=CLIENT_SECRET,
+        token_uri="https://googleapis.com",
+    )
+    creds.refresh(Request())
+    return creds.token
 
 def publicar_no_blogger_rest(titulo, conteudo):
-    token = obter_access_token_google()
+    token = obter_access_token_oficial()
     url = f"https://googleapis.com{BLOGGER_ID}/posts"
     headers = {
         "Authorization": f"Bearer {token}",
@@ -141,7 +142,7 @@ def publicar_no_blogger_rest(titulo, conteudo):
         raise Exception(f"Erro ao postar no Blogger: {resposta.text}")
 
 if __name__ == "__main__":
-    print("🐾 Iniciando automação HTTP REST limpa...")
+    print("🐾 Iniciando autenticação segura...")
     bicho_do_dia = proximo_bicho()
     abordagem_do_dia = obter_abordagem_do_dia()
     
