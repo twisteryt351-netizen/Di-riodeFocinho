@@ -3,8 +3,6 @@ import requests
 import random
 from datetime import datetime
 from groq import Groq
-from google.oauth2.credentials import Credentials
-from google.auth.transport.requests import Request
 
 # --- CONFIGURAÇÕES ---
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
@@ -43,7 +41,7 @@ ABORDAGENS = [
     "mitos urbanos e verdades populares sobre o comportamento deste animal",
     "uma análise psicológica afetuosa sobre como ele demonstra amor pelo dono",
     "dicas essenciais de linguagem corporal para aprender a ler os sinais dele",
-    "um roteiro prático focado em adestramento positivo e comandos simples",
+    "um roteiro prático focado focado em adestramento positivo e comandos simples",
     "curiosidades sobre como é a visão e a audição dele em comparação com os humanos",
     "um guia de cuidados especiais focados em quando ele atingir a idade idosa",
     "cuidados cruciais específicos voltados para as mudanças de estação (frio e calor intenso)",
@@ -72,7 +70,7 @@ def pedir_ia_groq(prompt, temperatura=1.0):
         model=MODELO_IA,
         temperature=temperatura,
     )
-    return response.choices[0].message.content.strip()
+    return response.choices.message.content.strip()
 
 def gerar_titulo(bicho, abordagem):
     token_anti_cache = random.randint(10000, 99999)
@@ -109,20 +107,23 @@ def gerar_artigo_cuidados(bicho, abordagem):
         artigo = artigo.strip("`").replace("html\n", "", 1)
     return artigo
 
-def obter_token_com_biblioteca():
-    """Usa a biblioteca oficial segura do Google para atualizar o token sem erros de requisição manual."""
-    creds = Credentials(
-        token=None,
-        refresh_token=REFRESH_TOKEN,
-        client_id=CLIENT_ID,
-        client_secret=CLIENT_SECRET,
-        token_uri="https://googleapis.com",
-    )
-    creds.refresh(Request())
-    return creds.token
+def obter_access_token_google():
+    """Usa data= payload no lugar de json= para passar na autenticação sem gerar erro 404."""
+    url = "https://googleapis.com"
+    payload = {
+        "client_id": CLIENT_ID.strip(),
+        "client_secret": CLIENT_SECRET.strip(),
+        "refresh_token": REFRESH_TOKEN.strip(),
+        "grant_type": "refresh_token"
+    }
+    # Envio via corpo de formulário HTTP x-www-form-urlencoded
+    resposta = requests.post(url, data=payload, timeout=10)
+    if resposta.status_code == 200:
+        return resposta.json().get("access_token")
+    raise Exception(f"Falha na validação OAuth2 do Google: {resposta.text}")
 
 def publicar_no_blogger_rest(titulo, conteudo):
-    token = obter_token_com_biblioteca()
+    token = obter_access_token_google()
     url = f"https://googleapis.com{BLOGGER_ID}/posts"
     headers = {
         "Authorization": f"Bearer {token}",
@@ -133,14 +134,14 @@ def publicar_no_blogger_rest(titulo, conteudo):
         "title": titulo,
         "content": conteudo
     }
-    resposta = requests.post(url, headers=headers, json=payload, timeout=15)
+    resposta = requests.post(url, json=payload, headers=headers, timeout=15)
     if resposta.status_code == 200:
-        print(f"🐾 Postado com sucesso via REST Oficial: '{titulo}'")
+        print(f"🐾 Postado com sucesso via REST Direto: '{titulo}'")
     else:
         raise Exception(f"Erro ao postar no Blogger: {resposta.text}")
 
 if __name__ == "__main__":
-    print("🐾 Iniciando automação estável via Google Auth...")
+    print("🐾 Iniciando automação limpa via HTTP REST Direto...")
     bicho_do_dia = proximo_bicho()
     abordagem_do_dia = obter_abordagem_do_dia()
     
@@ -152,9 +153,10 @@ if __name__ == "__main__":
 
     aviso = (
         '<br /><hr /><p style="font-size: 12px; color: #888; font-style: italic;">Este conteúdo é '
-        'totalmente informativo. Ele não substitui a avaliação de um veterinário profissional.</p>'
+        'totalmente informativo e tem o objetivo de entreter e educar. Ele não substitui a avaliação '
+        'e o acompanhamento médico de um veterinário especializado.</p>'
     )
 
     html_final = f"{img_html}{corpo}{aviso}"
     publicar_no_blogger_rest(titulo, html_final)
-    print("✅ Sucesso Completo!")
+    print("✅ Processo concluído com sucesso total!")
