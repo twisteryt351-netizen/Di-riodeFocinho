@@ -28,22 +28,11 @@ groq_client = Groq(api_key=GROQ_API_KEY)
 MODELO_IA = "llama-3.3-70b-versatile"
 
 BICHOS = [
-    {"nome": "Cachorro"},
-    {"nome": "Gato"},
-    {"nome": "Papagaio"},
-    {"nome": "Calopsita"},
-    {"nome": "Hamster"},
-    {"nome": "Coelho"},
-    {"nome": "Peixe de aquário"},
-    {"nome": "Tartaruga"},
-    {"nome": "Periquito"},
-    {"nome": "Porquinho-da-índia"},
-    {"nome": "Ferret (Furão)"},
-    {"nome": "Chinchila"},
-    {"nome": "Canário"},
-    {"nome": "Pogona (Dragão-barbudo)"},
-    {"nome": "Gato Persa"},
-    {"nome": "Rato Twister (Mecol)"}
+    {"nome": "Cachorro"}, {"nome": "Gato"}, {"nome": "Papagaio"}, {"nome": "Calopsita"},
+    {"nome": "Hamster"}, {"nome": "Coelho"}, {"nome": "Peixe de aquário"}, {"nome": "Tartaruga"},
+    {"nome": "Periquito"}, {"nome": "Porquinho-da-índia"}, {"nome": "Ferret (Furão)"},
+    {"nome": "Chinchila"}, {"nome": "Canário"}, {"nome": "Pogona (Dragão-barbudo)"},
+    {"nome": "Gato Persa"}, {"nome": "Rato Twister (Mecol)"}
 ]
 
 ABORDAGENS = [
@@ -63,7 +52,6 @@ def obter_abordagem_do_dia():
     semente = agora.hour + agora.minute + random.randint(1, 999)
     return ABORDAGENS[semente % len(ABORDAGENS)]
 
-# Imagem temporária e segura enquanto configuramos o seu Cloudflare
 IMAGEM_PADRAO = "https://wikimedia.org"
 
 def gerar_tabela_imagem_blogger(url_img, alt_title):
