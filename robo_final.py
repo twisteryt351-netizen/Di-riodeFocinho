@@ -3,6 +3,8 @@ import requests
 import random
 from datetime import datetime
 from groq import Groq
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
 
 # --- CONFIGURAÇÕES ---
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
@@ -107,21 +109,20 @@ def gerar_artigo_cuidados(bicho, abordagem):
         artigo = artigo.strip("`").replace("html\n", "", 1)
     return artigo
 
-def obter_access_token_google():
-    url = "https://googleapis.com"
-    payload = {
-        "client_id": CLIENT_ID,
-        "client_secret": CLIENT_SECRET,
-        "refresh_token": REFRESH_TOKEN,
-        "grant_type": "refresh_token"
-    }
-    resposta = requests.post(url, json=payload, timeout=10)
-    if resposta.status_code == 200:
-        return resposta.json().get("access_token")
-    raise Exception(f"Falha ao renovar token do Google: {resposta.text}")
+def obter_token_com_biblioteca():
+    """Usa a biblioteca oficial segura do Google para atualizar o token sem erros de requisição manual."""
+    creds = Credentials(
+        token=None,
+        refresh_token=REFRESH_TOKEN,
+        client_id=CLIENT_ID,
+        client_secret=CLIENT_SECRET,
+        token_uri="https://googleapis.com",
+    )
+    creds.refresh(Request())
+    return creds.token
 
 def publicar_no_blogger_rest(titulo, conteudo):
-    token = obter_access_token_google()
+    token = obter_token_com_biblioteca()
     url = f"https://googleapis.com{BLOGGER_ID}/posts"
     headers = {
         "Authorization": f"Bearer {token}",
@@ -134,12 +135,12 @@ def publicar_no_blogger_rest(titulo, conteudo):
     }
     resposta = requests.post(url, headers=headers, json=payload, timeout=15)
     if resposta.status_code == 200:
-        print(f"🐾 Postado com sucesso via REST: '{titulo}'")
+        print(f"🐾 Postado com sucesso via REST Oficial: '{titulo}'")
     else:
         raise Exception(f"Erro ao postar no Blogger: {resposta.text}")
 
 if __name__ == "__main__":
-    print("🐾 Iniciando automação via HTTP REST Direto...")
+    print("🐾 Iniciando automação estável via Google Auth...")
     bicho_do_dia = proximo_bicho()
     abordagem_do_dia = obter_abordagem_do_dia()
     
@@ -156,4 +157,4 @@ if __name__ == "__main__":
 
     html_final = f"{img_html}{corpo}{aviso}"
     publicar_no_blogger_rest(titulo, html_final)
-    print("✅ Sucesso!")
+    print("✅ Sucesso Completo!")
