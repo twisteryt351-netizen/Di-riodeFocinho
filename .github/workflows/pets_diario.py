@@ -56,19 +56,16 @@ ABORDAGENS = [
 ]
 
 def proximo_bicho():
-    """
-    Calcula o bicho combinando o dia do ano e o minuto atual.
-    Isso permite que você faça múltiplos testes seguidos e mude o bicho instantaneamente!
-    """
+    """Garante alternância instantânea usando o minuto e segundo atuais."""
     agora = datetime.now()
-    semente = agora.timetuple().tm_yday + agora.minute + agora.second
+    semente = agora.timetuple().tm_yday + agora.hour + agora.minute + agora.second
     indice_bicho = semente % len(BICHOS)
     return BICHOS[indice_bicho]
 
 def obter_abordagem_do_dia():
     """Garante rotação dinâmica de conteúdo baseado no tempo atual."""
     agora = datetime.now()
-    semente = agora.timetuple().tm_yday + agora.minute + agora.hour
+    semente = agora.timetuple().tm_yday + agora.hour + agora.minute + random.randint(1, 100)
     indice_abordagem = semente % len(ABORDAGENS)
     return ABORDAGENS[indice_abordagem]
 
@@ -88,7 +85,7 @@ def buscar_imagem_openverse(palavra_chave):
             timeout=10,
         )
         resultados = resposta.json().get("results", [])
-        # CORRIGIDO: adicionado [0] para acessar o primeiro item da lista antes de buscar a URL
+        # Correção da sintaxe de índice da lista
         return resultados[0]["url"] if resultados else IMAGEM_PADRAO
     except Exception as e:
         print(f"⚠️ Erro ao buscar imagem: {e}")
@@ -103,15 +100,15 @@ def pedir_ia_groq(prompt, temperatura=0.75):
         model=MODELO_IA,
         temperature=temperatura,
     )
+    # Correção crucial do objeto de resposta da API Groq
     return response.choices[0].message.content.strip()
 
 def gerar_titulo(bicho, abordagem):
-    # Adicionado um token aleatório oculto para forçar a IA a reescrever títulos do zero sem cache
-    token_variacao = random.randint(100, 999)
+    token_variacao = random.randint(1000, 9999)
     prompt = (
-        f"Crie um título de blog carinhoso e focado em SEO em português do Brasil, sem aspas, sobre {bicho}. "
-        f"O artigo abordará obrigatoriamente {abordagem}. Modificador criativo de ID: {token_variacao}. "
-        f"Responda apenas o título em texto puro, sem justificativas."
+        f"Crie um título inédito e criativo de blog focado em SEO em português do Brasil, sem aspas, sobre o animal: {bicho}. "
+        f"O foco do artigo deve ser estritamente {abordagem}. Modificador numérico anti-cache: {token_variacao}. "
+        f"Evite palavras batidas. Escreva apenas o título final em formato texto puro, sem comentários."
     )
     return pedir_ia_groq(prompt, temperatura=0.85).replace('"', '').strip()
 
@@ -123,9 +120,9 @@ def gerar_artigo_cuidados(bicho, abordagem):
 
     Escreva um artigo COMPLETO, profundo e otimizado para SEO sobre {bicho}, desenvolvendo especificamente {abordagem}.
 
-    REGRAS DE FORMATO (HTML puro, sem Markdown, sem blocos de código markdown):
+    REGRAS DE FORMATO (HTML puro, sem Markdown, sem blocos de código markdown como ```html):
     1. Um parágrafo de abertura (<p>) caloroso e envolvente, introduzindo o animal e o tema de hoje ({abordagem}) com muito afeto.
-    2. NO MÍNIMO 4 subtítulos <h2> desenvolvendo detalhadamente o assunto.
+    2. NO MÍNIMO 4 subtítulos <h2> desenvolvendo detalhadamente o assunto de forma criativa.
     3. Inclua detalhes práticos, fatos interessantes e específicos (não genéricos) sobre {bicho}.
     4. IMPORTANTE: não dê conselhos médicos definitivos que substituam um veterinário — sempre oriente a buscar ajuda profissional.
     5. O texto principal deve ter entre 800 e 1000 palavras, bem formatado com parágrafos (<p>).
@@ -135,7 +132,7 @@ def gerar_artigo_cuidados(bicho, abordagem):
     <h2>Um Pouquinho do Meu Dia a Dia</h2> 
     E escreva DOIS parágrafos grandes, no estilo de um diário pessoal e muito bem-humorado, contando uma trapalhada inédita que aconteceu com a Brunilda e/ou com o Thor em sua casa.
     """
-    artigo = pedir_ia_groq(prompt, temperatura=0.85)
+    artigo = pedir_ia_groq(prompt, temperature=0.9)
     if artigo.startswith("```"):
         artigo = artigo.strip("`").replace("html\n", "", 1)
     return artigo
