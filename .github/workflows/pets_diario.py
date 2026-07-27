@@ -80,9 +80,10 @@ def buscar_imagem_openverse(palavra_chave):
         )
         if resposta.status_code == 200:
             resultados = resposta.json().get("results", [])
-            # CORREÇÃO DA SINTAXE: Acessando o primeiro item [0] antes da URL
             if resultados and isinstance(resultados, list):
-                return resultados[0].get("url", IMAGEM_PADRAO)
+                # Correção segura para acessar o dicionário dentro da lista
+                primeiro_resultado = resultados[0]
+                return primeiro_resultado.get("url", IMAGEM_PADRAO)
         return IMAGEM_PADRAO
     except Exception as e:
         print(f"⚠️ Erro ao buscar imagem: {e}")
@@ -103,7 +104,7 @@ def gerar_titulo(bicho, abordagem):
     token_anti_cache = random.randint(10000, 99999)
     prompt = (
         f"Gere um título totalmente inédito e criativo de blog em português para o animal: {bicho}. "
-        f"O tema central deve ser obrigatoriamente {combinação de abordagem}. Proibido usar palavras repetidas como 'amigo fiel' ou 'vida saudável'. "
+        f"O tema central deve ser obrigatoriamente {abordagem}. Proibido usar palavras repetidas como 'amigo fiel' ou 'vida saudável'. "
         f"Escreva estritamente em formato de texto puro, sem aspas. Modificador numérico: {token_anti_cache}."
     )
     return pedir_ia_groq(prompt, temperatura=1.0).replace('"', '').strip()
@@ -156,13 +157,13 @@ if __name__ == "__main__":
     print("🐾 Iniciando automação de artigos diários...")
     
     bicho_do_dia = proximo_bicho()
-    abordagem_do_dia = obter_abordagem_do_dia()
+    bairro_do_dia = obter_abordagem_do_dia()
     
     print(f"Bicho selecionado: {bicho_do_dia['nome']}")
-    print(f"Abordagem definida: {abordagem_do_dia}")
+    print(f"Abordagem definida: {bairro_do_dia}")
 
-    titulo = gerar_titulo(bicho_do_dia['nome'], abordagem_do_dia)
-    corpo = gerar_artigo_cuidados(bicho_do_dia['nome'], abordagem_do_dia)
+    titulo = gerar_titulo(bicho_do_dia['nome'], bairro_do_dia)
+    corpo = gerar_artigo_cuidados(bicho_do_dia['nome'], bairro_do_dia)
     img_url = buscar_imagem_openverse(bicho_do_dia['img'])
     img_html = gerar_tabela_imagem_blogger(img_url, titulo)
 
