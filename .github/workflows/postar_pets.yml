@@ -15,7 +15,7 @@ jobs:
           python-version: '3.11'
       - run: pip install requests groq google-api-python-client google-auth-oauthlib google-auth
       - name: Run pets_diario.py
-        run: python pets_diario.py
+        run: python .github/workflows/pets_diario.py
         
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
