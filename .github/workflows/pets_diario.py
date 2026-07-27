@@ -76,17 +76,18 @@ def buscar_imagem_openverse(palavra_chave):
                 "mature": "false",
             },
             headers={"User-Agent": "RoboPets/1.0"},
-            timeout=10,
+            timeout=5,
         )
+        # Proteção: só tenta ler o JSON se o site responder com sucesso (Status 200)
         if resposta.status_code == 200:
-            resultados = resposta.json().get("results", [])
+            dados = resposta.json()
+            resultados = dados.get("results", [])
             if resultados and isinstance(resultados, list):
-                # Correção segura para acessar o dicionário dentro da lista
-                primeiro_resultado = resultados[0]
-                return primeiro_resultado.get("url", IMAGEM_PADRAO)
+                # Pega a URL do primeiro resultado de forma segura
+                return resultados[0].get("url", IMAGEM_PADRAO)
         return IMAGEM_PADRAO
     except Exception as e:
-        print(f"⚠️ Erro ao buscar imagem: {e}")
+        print(f"⚠️ Erro ao buscar imagem (usando padrão): {e}")
         return IMAGEM_PADRAO
 
 def gerar_tabela_imagem_blogger(url_img, alt_title):
@@ -113,7 +114,7 @@ def gerar_artigo_cuidados(bicho, abordagem):
     id_historia = random.randint(1000, 9999)
     prompt = f"""
     Você é o autor de um blog de pets muito querido pelos leitores. Sua persona: uma pessoa
-    caseira, carinhosa e cuidadosa, que ama animais e adora conversar com seus leitores. Você tem uma gata
+    caseira, carinhosa e cuidadosa, que ama animais e adora conversar with seus leitores. Você tem uma gata
     siamesa chamada Brunilda e um golden retriever chamado Thor.
 
     Escreva um artigo COMPLETO, profundo e otimizado para SEO sobre {bicho}, desenvolvendo especificamente {abordagem}.
@@ -157,13 +158,13 @@ if __name__ == "__main__":
     print("🐾 Iniciando automação de artigos diários...")
     
     bicho_do_dia = proximo_bicho()
-    bairro_do_dia = obter_abordagem_do_dia()
+    abordagem_do_dia = obter_abordagem_do_dia()
     
     print(f"Bicho selecionado: {bicho_do_dia['nome']}")
-    print(f"Abordagem definida: {bairro_do_dia}")
+    print(f"Abordagem definida: {abordagem_do_dia}")
 
-    titulo = gerar_titulo(bicho_do_dia['nome'], bairro_do_dia)
-    corpo = gerar_artigo_cuidados(bicho_do_dia['nome'], bairro_do_dia)
+    titulo = gerar_titulo(bicho_do_dia['nome'], abordagem_do_dia)
+    corpo = gerar_artigo_cuidados(bicho_do_dia['nome'], abordagem_do_dia)
     img_url = buscar_imagem_openverse(bicho_do_dia['img'])
     img_html = gerar_tabela_imagem_blogger(img_url, titulo)
 
