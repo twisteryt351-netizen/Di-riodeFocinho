@@ -16,7 +16,7 @@ jobs:
           python-version: '3.11'
 
       - name: Instalar dependencias limpas
-        run: pip install requests groq
+        run: pip install requests groq google-auth
 
       - name: Executar script correto
         run: python robo_final.py
