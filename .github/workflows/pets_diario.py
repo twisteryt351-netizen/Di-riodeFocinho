@@ -54,7 +54,6 @@ ABORDAGENS = [
 ]
 
 def proximo_bicho():
-    # Semente totalmente dinâmica baseada em minutos e segundos para mudar a cada teste manual
     agora = datetime.now()
     semente = agora.minute + agora.second + random.randint(1, 500)
     return BICHOS[semente % len(BICHOS)]
@@ -71,7 +70,7 @@ def buscar_imagem_openverse(palavra_chave):
         resposta = requests.get(
             "https://openverse.org",
             params={
-                "q": palabra_chave,
+                "q": palavra_chave,
                 "license_type": "commercial",
                 "page_size": 3,
                 "mature": "false",
@@ -79,9 +78,12 @@ def buscar_imagem_openverse(palavra_chave):
             headers={"User-Agent": "RoboPets/1.0"},
             timeout=10,
         )
-        resultados = resposta.json().get("results", [])
-        # CORREÇÃO CRUCIAL: Retornando o índice zero para evitar travamento do script
-        return resultados[0]["url"] if resultados else IMAGEM_PADRAO
+        if resposta.status_code == 200:
+            resultados = resposta.json().get("results", [])
+            # CORREÇÃO DA SINTAXE: Acessando o primeiro item [0] antes da URL
+            if resultados and isinstance(resultados, list):
+                return resultados[0].get("url", IMAGEM_PADRAO)
+        return IMAGEM_PADRAO
     except Exception as e:
         print(f"⚠️ Erro ao buscar imagem: {e}")
         return IMAGEM_PADRAO
@@ -100,8 +102,8 @@ def pedir_ia_groq(prompt, temperatura=1.0):
 def gerar_titulo(bicho, abordagem):
     token_anti_cache = random.randint(10000, 99999)
     prompt = (
-        f"Gere um título totalmente original e criativo de blog em português para o animal: {bicho}. "
-        f"O tema central deve ser obrigatoriamente {abordagem}. Proibido usar palavras repetidas como 'amigo fiel' ou 'vida saudável'. "
+        f"Gere um título totalmente inédito e criativo de blog em português para o animal: {bicho}. "
+        f"O tema central deve ser obrigatoriamente {combinação de abordagem}. Proibido usar palavras repetidas como 'amigo fiel' ou 'vida saudável'. "
         f"Escreva estritamente em formato de texto puro, sem aspas. Modificador numérico: {token_anti_cache}."
     )
     return pedir_ia_groq(prompt, temperatura=1.0).replace('"', '').strip()
