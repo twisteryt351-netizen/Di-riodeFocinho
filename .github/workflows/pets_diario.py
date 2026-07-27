@@ -1,5 +1,6 @@
 import os
 import requests
+from datetime import datetime
 from groq import Groq
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
@@ -25,7 +26,7 @@ for nome, valor in [
 groq_client = Groq(api_key=GROQ_API_KEY)
 MODELO_IA = "llama-3.3-70b-versatile"
 
-# --- RODÍZIO DE BICHOS (ordem fixa, um por dia, não aleatório) ---
+# --- RODÍZIO DE BICHOS EXPANDIDO ---
 BICHOS = [
     {"nome": "Cachorro", "img": "dog pet care"},
     {"nome": "Gato", "img": "cat pet care"},
@@ -37,40 +38,38 @@ BICHOS = [
     {"nome": "Tartaruga", "img": "turtle pet care"},
     {"nome": "Periquito", "img": "parakeet bird pet"},
     {"nome": "Porquinho-da-índia", "img": "guinea pig pet"},
+    {"nome": "Ferret (Furão)", "img": "ferret pet"},
+    {"nome": "Chinchila", "img": "chinchila pet"},
+    {"nome": "Canário", "img": "canary bird pet"},
+    {"nome": "Pogona (Dragão-barbudo)", "img": "bearded dragon pet"},
+    {"nome": "Gato Persa", "img": "persian cat pet"},
+    {"nome": "Rato Twister (Mecol)", "img": "pet rat care"}
 ]
 
-ARQUIVO_HISTORICO = "historico_pets.txt"
-
+# --- TIPOS DE CONTEÚDO PARA VARIAR O ASSUNTO (Evita repetição de abordagem) ---
+ABORDAGENS = [
+    "uma dica de cuidado prático e essencial",
+    "uma curiosidade fascinante e pouco conhecida",
+    "um fato histórico marcante sobre a origem da relação deles com os humanos",
+    "um conto ou lenda antiga cativante envolvendo este animal"
+]
 
 def proximo_bicho():
-    """Pega o próximo bicho da lista, em ordem de rodízio, sem repetir até passar por todos."""
-    if not os.path.exists(ARQUIVO_HISTORICO):
-        return BICHOS[0]
+    """
+    Calcula o bicho do dia usando o dia do ano corrente.
+    Isso impede o looping eterno no GitHub Actions, eliminando a dependência de arquivos de texto locais.
+    """
+    dia_do_ano = datetime.now().timetuple().tm_yday
+    indice_bicho = dia_do_ano % len(BICHOS)
+    return BICHOS[indice_bicho]
 
-    with open(ARQUIVO_HISTORICO, "r", encoding="utf-8") as f:
-        linhas = f.read().splitlines()
-
-    if not linhas:
-        return BICHOS[0]
-
-    ultimo_nome = linhas[-1]
-    nomes = [b["nome"] for b in BICHOS]
-
-    if ultimo_nome not in nomes:
-        return BICHOS[0]
-
-    indice_atual = nomes.index(ultimo_nome)
-    proximo_indice = (indice_atual + 1) % len(BICHOS)
-    return BICHOS[proximo_indice]
-
-
-def marcar_bicho_usado(nome_bicho):
-    with open(ARQUIVO_HISTORICO, "a", encoding="utf-8") as f:
-        f.write(nome_bicho + "\n")
-
+def obter_abordagem_do_dia():
+    """Garante que a abordagem mude a cada dia seguindo um rodízio fixo."""
+    dia_do_ano = datetime.now().timetuple().tm_yday
+    indice_abordagem = dia_do_ano % len(ABORDAGENS)
+    return ABORDAGENS[indice_abordagem]
 
 IMAGEM_PADRAO = "https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/News_icon.svg/640px-News_icon.svg.png"
-
 
 def buscar_imagem_openverse(palavra_chave):
     try:
@@ -91,10 +90,8 @@ def buscar_imagem_openverse(palavra_chave):
         print(f"⚠️ Erro ao buscar imagem: {e}")
         return IMAGEM_PADRAO
 
-
 def gerar_tabela_imagem_blogger(url_img, alt_title):
     return f'''<table align="center" cellpadding="0" cellspacing="0" class="tr-caption-container" style="margin-left: auto; margin-right: auto;"><tbody><tr><td style="text-align: center;"><img alt="{alt_title}" border="0" height="360" src="{url_img}" title="{alt_title}" width="640" /></td></tr></tbody></table><br />'''
-
 
 def pedir_ia_groq(prompt, temperatura=0.75):
     response = groq_client.chat.completions.create(
@@ -104,48 +101,40 @@ def pedir_ia_groq(prompt, temperatura=0.75):
     )
     return response.choices[0].message.content.strip()
 
-
-def gerar_titulo(bicho):
+def gerar_titulo(bicho, abordagem):
     prompt = (
-        f"Crie um título de blog carinhoso e otimizado para SEO, em português do Brasil, sem "
-        f"aspas, sobre cuidados com {bicho} de estimação. Responda apenas o título, texto puro."
+        f"Crie um título de blog carinhoso, chamativo e altamente otimizado para SEO em português do Brasil, "
+        f"sem aspas, focado em {bicho}. O título DEVE refletir estritamente que o artigo trará {abordagem}. "
+        f"Não use títulos genéricos de dicas se a abordagem for história, lenda ou curiosidade. Responda apenas o título em texto puro."
     )
     return pedir_ia_groq(prompt, temperatura=0.7).replace('"', '').strip()
 
-
-def gerar_artigo_cuidados(bicho):
+def gerar_artigo_cuidados(bicho, abordagem):
     prompt = f"""
     Você é o autor de um blog de pets muito querido pelos leitores. Sua persona: uma pessoa
-    caseira, carinhosa e cuidadosa, que ama animais e adora dar dicas práticas — como aquele
+    caseira, carinhosa e cuidadosa, que ama animais e adora conversar com seus leitores — como aquele
     amigo que todo mundo pede conselho antes de levar um bichinho pra casa. Você tem uma gata
     siamesa chamada Brunilda e um golden retriever chamado Thor.
 
-    Escreva um artigo COMPLETO, bem escrito e otimizado para SEO sobre cuidados com: {bicho}.
+    Escreva um artigo COMPLETO, profundo e otimizado para SEO sobre {bicho}, desenvolvendo especificamente {abordagem}.
 
-    REGRAS DE FORMATO (HTML puro, sem Markdown):
-    1. Um parágrafo de abertura (<p>) caloroso, puxando o leitor pelo tom de amizade e carinho
-       pelos bichos (sem ainda falar de Brunilda ou Thor — isso fica pro final).
-    2. NO MÍNIMO 4 subtítulos <h2> cobrindo: alimentação adequada, cuidados com saúde/higiene,
-       ambiente/espaço ideal, e comportamento/bem-estar emocional do animal.
-    3. Inclua dicas práticas e específicas (não genéricas) sobre {bicho}.
-    4. IMPORTANTE: não dê conselhos médicos definitivos que substituam um veterinário — sempre
-       que mencionar sintomas de doença ou situação de saúde, oriente o leitor a procurar um
-       veterinário de confiança.
-    5. Não invente estatísticas ou fatos veterinários específicos que você não tenha certeza.
-    6. O texto principal (sem contar os parágrafos finais do diário pessoal) deve ter entre
-       800 e 1000 palavras, bem escrito, útil e envolvente.
-    7. Não inclua links nem chamadas de venda.
+    REGRAS DE FORMATO (HTML puro, sem Markdown, não use tags ```html):
+    1. Um parágrafo de abertura (<p>) caloroso e envolvente, introduzindo o animal e o tema de hoje ({abordagem}) com muito afeto (sem falar de Brunilda ou Thor aqui).
+    2. NO MÍNIMO 4 subtítulos <h2> desenvolvendo detalhadamente o assunto. Se o foco for um conto, história ou curiosidade, os subtítulos devem contar essa jornada de forma dividida, mas ainda assim incluir uma seção final ligando isso ao bem-estar e manejo correto do animal hoje em dia.
+    3. Inclua detalhes práticos, fatos interessantes e específicos (não genéricos) sobre {bicho}.
+    4. IMPORTANTE: não dê conselhos médicos definitivos que substituam um veterinário — sempre que houver menção a saúde, oriente o leitor a buscar ajuda profissional.
+    5. O texto principal (sem contar a seção final do diário) deve ter entre 800 e 1000 palavras, enriquecedor e bem formatado com parágrafos (<p>).
+    6. Não inclua links nem chamadas de venda.
 
-    Ao final do texto de dicas, adicione uma transição natural como um subtítulo
-    <h2>Um Pouquinho do Meu Dia a Dia</h2> e escreva DOIS parágrafos grandes, no estilo de um
-    diário pessoal e bem-humorado (tipo o filme Marley & Eu), contando uma trapalhada ou
-    momento fofo real e específico que aconteceu com a Brunilda (gata siamesa) e/ou com o
-    Thor (golden retriever) no dia a dia — invente uma cena cotidiana, engraçada e carinhosa
-    (ex: Thor roubando meia, Brunilda derrubando planta, os dois brigando por espaço no sofá,
-    etc). Mantenha um tom pessoal, próximo e afetuoso, como se estivesse contando pra um amigo.
+    Ao final do texto, adicione obrigatoriamente a transição:
+    <h2>Um Pouquinho do Meu Dia a Dia</h2> 
+    E escreva DOIS parágrafos grandes, no estilo de um diário pessoal e muito bem-humorado (tipo Marley & Eu), contando uma trapalhada inédita e fofa que aconteceu com a Brunilda (gata siamesa) e/ou com o Thor (golden retriever) em sua casa. Mantenha o tom íntimo e próximo.
     """
-    return pedir_ia_groq(prompt, temperatura=0.8)
-
+    # Remove marcações de bloco que a IA costuma colocar incorretamente
+    artigo = pedir_ia_groq(prompt, temperatura=0.8)
+    if artigo.startswith("```"):
+        artigo = artigo.strip("`").replace("html\n", "", 1)
+    return artigo
 
 def obter_credenciais():
     creds = Credentials(
@@ -158,32 +147,34 @@ def obter_credenciais():
     creds.refresh(Request())
     return creds
 
-
 def publicar_no_blogger(titulo, conteudo):
     creds = obter_credenciais()
     blogger = build('blogger', 'v3', credentials=creds)
     corpo_postagem = {'kind': 'blogger#post', 'title': titulo, 'content': conteudo}
     resultado = blogger.posts().insert(blogId=BLOGGER_ID, body=corpo_postagem).execute()
-    print(f"🐾 Postado: '{titulo}' -> {resultado.get('url')}")
-
+    print(f"🐾 Postado com sucesso: '{titulo}' -> {resultado.get('url')}")
 
 if __name__ == "__main__":
-    print("🐾 Gerando artigo de cuidados com pets do dia...")
-    bicho = proximo_bicho()
-    print(f"Bicho de hoje: {bicho['nome']}")
+    print("🐾 Iniciando automação de artigos diários...")
+    
+    bicho_do_dia = proximo_bicho()
+    abordagem_do_dia = obter_abordagem_do_dia()
+    
+    print(f"Bicho selecionado: {bicho_do_dia['nome']}")
+    print(f"Abordagem definida: {abordagem_do_dia}")
 
-    titulo = gerar_titulo(bicho['nome'])
-    corpo = gerar_artigo_cuidados(bicho['nome'])
-    img_url = buscar_imagem_openverse(bicho['img'])
+    titulo = gerar_titulo(bicho_do_dia['nome'], abordagem_do_dia)
+    corpo = gerar_artigo_cuidados(bicho_do_dia['nome'], abordagem_do_dia)
+    img_url = buscar_imagem_openverse(bicho_do_dia['img'])
     img_html = gerar_tabela_imagem_blogger(img_url, titulo)
 
     aviso = (
-        '<p style="font-size: 12px; color: #888; font-style: italic;">Este conteúdo é '
-        'informativo e não substitui a avaliação de um médico veterinário. Em caso de '
-        'sintomas ou dúvidas sobre a saúde do seu animal, procure um profissional.</p>'
+        '<br /><hr /><p style="font-size: 12px; color: #888; font-style: italic;">Este conteúdo é '
+        'totalmente informativo e tem o objetivo de entreter e educar. Ele não substitui, em hipótese alguma, a avaliação '
+        'e o acompanhamento médico de um veterinário especializado. Ao notar qualquer mudança de comportamento ou suspeita '
+        'de mal-estar no seu animal de estimação, consulte um profissional imediatamente.</p>'
     )
 
     html_final = f"{img_html}{corpo}{aviso}"
     publicar_no_blogger(titulo, html_final)
-    marcar_bicho_usado(bicho['nome'])
-    print("✅ Concluído!")
+    print("✅ Processo do dia concluído!")
