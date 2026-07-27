@@ -1,27 +1,13 @@
 import os
-import requests
 import random
 from datetime import datetime
 from groq import Groq
-from google.oauth2.credentials import Credentials
-from google.auth.transport.requests import Request
 
 # --- CONFIGURAÇÕES ---
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
-BLOGGER_ID = os.environ.get("BLOGGER_ID_PETS")
-CLIENT_ID = os.environ.get("BLOGGER_CLIENT_ID")
-CLIENT_SECRET = os.environ.get("BLOGGER_CLIENT_SECRET")
-REFRESH_TOKEN = os.environ.get("BLOGGER_REFRESH_TOKEN")
 
-for nome, valor in [
-    ("GROQ_API_KEY", GROQ_API_KEY),
-    ("BLOGGER_ID_PETS", BLOGGER_ID),
-    ("BLOGGER_CLIENT_ID", CLIENT_ID),
-    ("BLOGGER_CLIENT_SECRET", CLIENT_SECRET),
-    ("BLOGGER_REFRESH_TOKEN", REFRESH_TOKEN),
-]:
-    if not valor:
-        raise ValueError(f"Faltou configurar a variável/segredo: {nome}")
+if not GROQ_API_KEY:
+    raise ValueError("Faltou configurar a variável/segredo: GROQ_API_KEY")
 
 groq_client = Groq(api_key=GROQ_API_KEY)
 MODELO_IA = "llama-3.3-70b-versatile"
@@ -73,7 +59,6 @@ def pedir_ia_groq(prompt, temperatura=1.0):
         model=MODELO_IA,
         temperature=temperatura,
     )
-    # CORRIGIDO DEFINITIVAMENTE COM O ÍNDICE DA LISTA:
     return response.choices[0].message.content.strip()
 
 def gerar_titulo(bicho, abordagem):
@@ -106,43 +91,13 @@ def gerar_artigo_cuidados(bicho, abordagem):
     E escreva DOIS parágrafos grandes, no estilo de um diário pessoal e muito bem-humorado, contando uma trapalhada inédita que aconteceu com a Brunilda e/ou com o Thor em sua casa. 
     Chave de variação da história: {id_historia}. Crie uma narrativa completamente nova e mude a forma de começar para não repetir postagens antigas.
     """
-    artigo = pedir_ia_groq(prompt, temperatura=1.0)
+    artigo = pedir_ia_groq(prompt, temperature=1.0)
     if artigo.startswith("```"):
         artigo = artigo.strip("`").replace("html\n", "", 1)
     return artigo
 
-def obter_access_token_oficial():
-    """Usa a biblioteca original do Google que rodava perfeitamente no seu primeiro script."""
-    creds = Credentials(
-        token=None,
-        refresh_token=REFRESH_TOKEN,
-        client_id=CLIENT_ID,
-        client_secret=CLIENT_SECRET,
-        token_uri="https://googleapis.com",
-    )
-    creds.refresh(Request())
-    return creds.token
-
-def publicar_no_blogger_rest(titulo, conteudo):
-    token = obter_access_token_oficial()
-    url = f"https://googleapis.com{BLOGGER_ID}/posts"
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "kind": "blogger#post",
-        "title": titulo,
-        "content": conteudo
-    }
-    resposta = requests.post(url, json=payload, headers=headers, timeout=15)
-    if resposta.status_code == 200:
-        print(f"🐾 Postado com sucesso via REST Direto: '{titulo}'")
-    else:
-        raise Exception(f"Erro ao postar no Blogger: {resposta.text}")
-
 if __name__ == "__main__":
-    print("🐾 Iniciando autenticação segura...")
+    print("🐾 Iniciando geração do artigo do dia...")
     bicho_do_dia = proximo_bicho()
     abordagem_do_dia = obter_abordagem_do_dia()
     
@@ -158,5 +113,10 @@ if __name__ == "__main__":
     )
 
     html_final = f"{img_html}{corpo}{aviso}"
-    publicar_no_blogger_rest(titulo, html_final)
-    print("✅ Sucesso total!")
+    
+    print("\n" + "="*50)
+    print(f"📌 TÍTULO DO POST:\n{titulo}")
+    print("="*50)
+    print(f"📝 CONTEÚDO HTML (COPIE ABAIXO):\n{html_final}")
+    print("="*50)
+    print("✅ Artigo gerado com sucesso no console!")
