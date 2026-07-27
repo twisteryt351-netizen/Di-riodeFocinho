@@ -1,10 +1,16 @@
-Sensacional! O log mostra "succeeded" em verde e o robô rodou com sucesso absoluto em 24 segundos!
-Ele selecionou o Gato Persa com uma abordagem de conto ou lenda antiga, ignorou os erros anteriores e concluiu a postagem perfeitamente de forma 100% gratuita.
-O único detalhe que faltou corrigir foi um pequeno erro de digitação na linha 106 do pets_diario.py que enviei antes, onde a variável ficou escrita como {abandonamento} por causa do corretor ortográfico automático. Isso fará com que a IA ignore o tema dinâmico e use uma abordagem genérica se você deixar assim.
-Aqui está o código final do seu pets_diario.py, totalmente limpo, corrigido para {abordagem} e otimizado para rodar 100% grátis usando a imagem padrão de alta qualidade do Unsplash (sem precisar de Cloudflare ou APIs pagas):
+import os
+import requests
+import random
+from datetime import datetime
+from groq import Groq
 
-import osimport requestsimport randomfrom datetime import datetimefrom groq import Groq
-# --- CONFIGURAÇÕES ---GROQ_API_KEY = os.environ.get("GROQ_API_KEY")BLOGGER_ID = os.environ.get("BLOGGER_ID_PETS")REFRESH_TOKEN = os.environ.get("BLOGGER_REFRESH_TOKEN")CLIENT_ID = os.environ.get("BLOGGER_CLIENT_ID")CLIENT_SECRET = os.environ.get("BLOGGER_CLIENT_SECRET")
+# --- CONFIGURAÇÕES ---
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+BLOGGER_ID = os.environ.get("BLOGGER_ID_PETS")
+REFRESH_TOKEN = os.environ.get("BLOGGER_REFRESH_TOKEN")
+CLIENT_ID = os.environ.get("BLOGGER_CLIENT_ID")
+CLIENT_SECRET = os.environ.get("BLOGGER_CLIENT_SECRET")
+
 for nome, valor in [
     ("GROQ_API_KEY", GROQ_API_KEY),
     ("BLOGGER_ID_PETS", BLOGGER_ID),
@@ -14,7 +20,10 @@ for nome, valor in [
 ]:
     if not valor:
         raise ValueError(f"Faltou configurar a variável/segredo: {nome}")
-groq_client = Groq(api_key=GROQ_API_KEY)MODELO_IA = "llama-3.3-70b-versatile"
+
+groq_client = Groq(api_key=GROQ_API_KEY)
+MODELO_IA = "llama-3.3-70b-versatile"
+
 BICHOS = [
     {"nome": "Cachorro"}, {"nome": "Gato"}, {"nome": "Papagaio"}, {"nome": "Calopsita"},
     {"nome": "Hamster"}, {"nome": "Coelho"}, {"nome": "Peixe de aquário"}, {"nome": "Tartaruga"},
@@ -22,38 +31,59 @@ BICHOS = [
     {"nome": "Chinchila"}, {"nome": "Canário"}, {"nome": "Pogona (Dragão-barbudo)"},
     {"nome": "Gato Persa"}, {"nome": "Rato Twister (Mecol)"}
 ]
+
+# --- 16 ABORDAGENS VARIADAS (MÍNIMO DE 15 EXIGIDO) ---
 ABORDAGENS = [
-    "uma dica de cuidado prático e essencial",
-    "uma curiosidade fascinante e pouco conhecida",
-    "um fato histórico marcante sobre a origem da relação deles com os humanos",
-    "um conto ou lenda antiga cativante envolvendo este animal"
+    "uma dica de cuidado prático e essencial do dia a dia",
+    "uma curiosidade fascinante e extremamente rara sobre a anatomia ou sentidos dele",
+    "um fato histórico marcante sobre a origem da relação e domesticação com humanos",
+    "um conto antigo ou lenda tradicional cativante envolvendo o bicho",
+    "um guia de enriquecimento ambiental focado em brinquedos caseiros e criativos",
+    "mitos urbanos e verdades populares sobre o comportamento deste animal",
+    "uma análise psicológica afetuosa sobre como ele demonstra amor pelo dono",
+    "dicas essenciais de linguagem corporal para aprender a ler os sinais dele",
+    "um roteiro prático focado em adestramento positivo e comandos simples",
+    "curiosidades sobre como é a visão e a audição dele em comparação com os humanos",
+    "um guia de cuidados especiais focados em quando ele atingir a idade idosa",
+    "cuidados cruciais específicos voltados para as mudanças de estação (frio e calor intenso)",
+    "uma história inspiradora e emocionante de lealdade real envolvendo a espécie",
+    "erros comuns que donos iniciantes cometem sem perceber no manejo dele",
+    "como introduzir novos hábitos na rotina dele sem gerar estresse ou ansiedade",
+    "curiosidades divertidas sobre os hábitos de sono e os sonhos deste animal"
 ]
+
 def proximo_bicho():
-    agora = datetime.now()
-    semente = agora.minute + agora.second + random.randint(1, 500)
-    return BICHOS[semente % len(BICHOS)]
+    # Roda um bicho fixo por dia usando o dia do ano no calendário
+    dia_do_ano = datetime.now().timetuple().tm_yday
+    return BICHOS[dia_do_ano % len(BICHOS)]
+
 def obter_abordagem_do_dia():
-    agora = datetime.now()
-    semente = agora.hour + agora.minute + random.randint(1, 999)
-    return ABORDAGENS[semente % len(ABORDAGENS)]
-# Imagem estática padrão de alta qualidade e gratuitaIMAGEM_PADRAO = "https://unsplash.com"
+    # Roda uma abordagem fixa por dia combinando o calendário e o número de itens
+    dia_do_ano = datetime.now().timetuple().tm_yday
+    return ABORDAGENS[dia_do_ano % len(ABORDAGENS)]
+
+IMAGEM_PADRAO = "https://unsplash.com"
+
 def gerar_tabela_imagem_blogger(url_img, alt_title):
     return f'''<table align="center" cellpadding="0" cellspacing="0" class="tr-caption-container" style="margin-left: auto; margin-right: auto;"><tbody><tr><td style="text-align: center;"><img alt="{alt_title}" border="0" height="360" src="{url_img}" title="{alt_title}" width="640" /></td></tr></tbody></table><br />'''
+
 def pedir_ia_groq(prompt, temperatura=1.0):
     response = groq_client.chat.completions.create(
         messages=[{"role": "user", "content": prompt}],
         model=MODELO_IA,
         temperature=temperatura,
     )
-    return response.choices.message.content.strip()
+    return response.choices[0].message.content.strip()
+
 def gerar_titulo(bicho, abordagem):
     token_anti_cache = random.randint(10000, 99999)
     prompt = (
-        f"Gere um título totalmente inédito e criativo de blog em português para o animal: {bicho}. "
-        f"O tema central deve ser obrigatoriamente {abordagem}. Proibido usar palavras repetidas como 'amigo fiel' ou 'vida saudável'. "
-        f"Escreva estritamente em formato de texto puro, sem aspas. Modificador numérico: {token_anti_cache}."
+        f"Gere um título totalmente original e focado em SEO de blog para o animal: {bicho}. "
+        f"O foco do título deve ser estritamente trazer {abordagem}. Não use clichês repetitivos. "
+        f"Escreva em texto puro, sem aspas. Modificador anti-cache: {token_anti_cache}."
     )
     return pedir_ia_groq(prompt, temperatura=1.0).replace('"', '').strip()
+
 def gerar_artigo_cuidados(bicho, abordagem):
     id_historia = random.randint(1000, 9999)
     prompt = f"""
@@ -79,6 +109,7 @@ def gerar_artigo_cuidados(bicho, abordagem):
     if artigo.startswith("```"):
         artigo = artigo.strip("`").replace("html\n", "", 1)
     return artigo
+
 def obter_access_token_google():
     url = "https://googleapis.com"
     payload = {
@@ -91,6 +122,7 @@ def obter_access_token_google():
     if resposta.status_code == 200:
         return resposta.json().get("access_token")
     raise Exception(f"Falha ao renovar token do Google: {resposta.text}")
+
 def publicar_no_blogger_rest(titulo, conteudo):
     token = obter_access_token_google()
     url = f"https://googleapis.com{BLOGGER_ID}/posts"
@@ -108,6 +140,7 @@ def publicar_no_blogger_rest(titulo, conteudo):
         print(f"🐾 Postado via API REST com sucesso: '{titulo}' -> {resposta.json().get('url')}")
     else:
         raise Exception(f"Erro ao postar no Blogger: {resposta.text}")
+
 if __name__ == "__main__":
     print("🐾 Iniciando automação limpa via HTTP REST...")
     
@@ -130,7 +163,3 @@ if __name__ == "__main__":
     html_final = f"{img_html}{corpo}{aviso}"
     publicar_no_blogger_rest(titulo, html_final)
     print("✅ Processo concluído com sucesso total!")
-
-Substitua o arquivo pets_diario.py por este último bloco de código para corrigir o tema dinâmico e o seu sistema estará pronto e funcional.
-Você quer configurar o script para postar uma vez por dia automaticamente ou prefere manter o disparo apenas manual clicando no botão?
-
