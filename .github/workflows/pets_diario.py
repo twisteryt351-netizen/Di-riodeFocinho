@@ -56,17 +56,15 @@ ABORDAGENS = [
 ]
 
 def proximo_bicho():
-    """Garante alternância instantânea usando o minuto e segundo atuais."""
-    agora = datetime.now()
-    semente = agora.timetuple().tm_yday + agora.hour + agora.minute + agora.second
-    indice_bicho = semente % len(BICHOS)
+    """Usa o dia do ano corrente para garantir rotação exata a cada 24h."""
+    dia_do_ano = datetime.now().timetuple().tm_yday
+    indice_bicho = dia_do_ano % len(BICHOS)
     return BICHOS[indice_bicho]
 
 def obter_abordagem_do_dia():
-    """Garante rotação dinâmica de conteúdo baseado no tempo atual."""
-    agora = datetime.now()
-    semente = agora.timetuple().tm_yday + agora.hour + agora.minute + random.randint(1, 100)
-    indice_abordagem = semente % len(ABORDAGENS)
+    """Usa o dia do ano combinado com um fator aleatório para variar o estilo do texto."""
+    dia_do_ano = datetime.now().timetuple().tm_yday
+    indice_abordagem = (dia_do_ano + random.randint(1, 50)) % len(ABORDAGENS)
     return ABORDAGENS[indice_abordagem]
 
 IMAGEM_PADRAO = "https://wikimedia.org"
@@ -85,7 +83,7 @@ def buscar_imagem_openverse(palavra_chave):
             timeout=10,
         )
         resultados = resposta.json().get("results", [])
-        # Correção da sintaxe de índice da lista
+        # FIX: Acessa o índice [0] da lista antes de buscar a propriedade 'url'
         return resultados[0]["url"] if resultados else IMAGEM_PADRAO
     except Exception as e:
         print(f"⚠️ Erro ao buscar imagem: {e}")
@@ -100,15 +98,15 @@ def pedir_ia_groq(prompt, temperatura=0.75):
         model=MODELO_IA,
         temperature=temperatura,
     )
-    # Correção crucial do objeto de resposta da API Groq
+    # FIX CORRIGIDO: Adicionado o [0] que faltava para acessar a mensagem na API da Groq
     return response.choices[0].message.content.strip()
 
 def gerar_titulo(bicho, abordagem):
     token_variacao = random.randint(1000, 9999)
     prompt = (
-        f"Crie um título inédito e criativo de blog focado em SEO em português do Brasil, sem aspas, sobre o animal: {bicho}. "
-        f"O foco do artigo deve ser estritamente {abordagem}. Modificador numérico anti-cache: {token_variacao}. "
-        f"Evite palavras batidas. Escreva apenas o título final em formato texto puro, sem comentários."
+        f"Crie um título inédito, chamativo e criativo de blog focado em SEO em português do Brasil, sem aspas, sobre o animal: {bicho}. "
+        f"O foco do artigo deve ser trazer {abordagem}. Código verificador único: {token_variacao}. "
+        f"Não use frases repetidas. Escreva apenas o título final em formato texto puro."
     )
     return pedir_ia_groq(prompt, temperatura=0.85).replace('"', '').strip()
 
@@ -120,9 +118,9 @@ def gerar_artigo_cuidados(bicho, abordagem):
 
     Escreva um artigo COMPLETO, profundo e otimizado para SEO sobre {bicho}, desenvolvendo especificamente {abordagem}.
 
-    REGRAS DE FORMATO (HTML puro, sem Markdown, sem blocos de código markdown como ```html):
-    1. Um parágrafo de abertura (<p>) caloroso e envolvente, introduzindo o animal e o tema de hoje ({abordagem}) com muito afeto.
-    2. NO MÍNIMO 4 subtítulos <h2> desenvolvendo detalhadamente o assunto de forma criativa.
+    REGRAS DE FORMATO (HTML puro, sem Markdown, sem blocos de código como ```html):
+    1. Um parágrafo de abertura (<p>) caloroso e envolvendo o leitor, introduzindo o animal e o tema de hoje ({abordagem}) com muito afeto.
+    2. NO MÍNIMO 4 subtítulos <h2> desenvolvendo detalhadamente o assunto abordado de maneira criativa.
     3. Inclua detalhes práticos, fatos interessantes e específicos (não genéricos) sobre {bicho}.
     4. IMPORTANTE: não dê conselhos médicos definitivos que substituam um veterinário — sempre oriente a buscar ajuda profissional.
     5. O texto principal deve ter entre 800 e 1000 palavras, bem formatado com parágrafos (<p>).
@@ -137,7 +135,7 @@ def gerar_artigo_cuidados(bicho, abordagem):
         artigo = artigo.strip("`").replace("html\n", "", 1)
     return artigo
 
-def obter_credenciais():
+def obtener_credenciais():
     creds = Credentials(
         token=None,
         refresh_token=REFRESH_TOKEN,
@@ -149,7 +147,7 @@ def obter_credenciais():
     return creds
 
 def publicar_no_blogger(titulo, conteudo):
-    creds = obter_credenciais()
+    creds = obtener_credenciais()
     blogger = build('blogger', 'v3', credentials=creds)
     corpo_postagem = {'kind': 'blogger#post', 'title': titulo, 'content': conteudo}
     resultado = blogger.posts().insert(blogId=BLOGGER_ID, body=corpo_postagem).execute()
