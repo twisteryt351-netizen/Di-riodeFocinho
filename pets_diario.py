@@ -239,7 +239,7 @@ REGRAS DE FORMATO (HTML puro, sem Markdown):
 2. NO MÍNIMO 4 subtítulos <h2> cobrindo aspectos diferentes do ângulo escolhido.
 3. Pelo menos 1 lista <ul> com dicas práticas e específicas.
 4. 2 a 3 <blockquote> com comentários bem-humorados, tipo nota de rodapé de fã dos bichos.
-5. Não inclua links no corpo do texto.
+5. Não esquece de incluir as Tag´s dos post´s.
 
 Depois do conteúdo principal, adicione:
 <h2>Diário da Semana 🐾</h2>
