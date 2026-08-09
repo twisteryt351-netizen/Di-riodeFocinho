@@ -260,7 +260,7 @@ def gerar_prompts_imagens(bicho, titulo, num_imagens):
     outros = ""
     if num_imagens > 1:
         outros = (
-            f"\n- Prompts 2 a {num_imagens}: cenas conceituais e emocionais que ilustram "
+            f"\n- Imagens 2 a {num_imagens}: cenas conceituais e emocionais que ilustram "
             f"momentos de cuidado, brincadeira, afeto ou curiosidade sobre {bicho}. "
             f"Cada uma deve ser visualmente única e transmitir uma emoção diferente."
         )
@@ -271,33 +271,42 @@ You are an expert art director creating image prompts for a warm, fun pet care b
 Animal: "{bicho}"
 Article title: "{titulo}"
 
-Create exactly {num_imagens} image generation prompt(s) in English:
+Create exactly {num_imagens} image concepts:
 
-- Prompt 1 (COVER): eye-catching thumbnail-style image of {bicho}. Must be irresistible
+- Image 1 (COVER): eye-catching thumbnail-style image of {bicho}. Must be irresistible
   to click: bold composition, vibrant warm colors, adorable or funny expression, soft
   cinematic lighting, 8K photorealistic quality. Style: magazine cover meets viral social
   media post. No text or watermarks in the image.{outros}
 
-Rules for ALL prompts:
-- Each prompt: one vivid descriptive paragraph, no numbering or labels.
-- No text, logos or words inside images.
-- Photorealistic preferred. Warm, cozy, emotional tone.
-- 8K, sharp details, professional pet photography aesthetic.
+For EACH image, provide:
+- "prompt": one vivid descriptive paragraph in ENGLISH for the image generator. No text,
+  logos or words inside the image. Photorealistic preferred, warm/cozy/emotional tone,
+  8K, sharp details, professional pet photography aesthetic.
+- "legenda": a short caption in BRAZILIAN PORTUGUESE (under 12 words) describing what the
+  image shows, written like a photo caption a reader would see under the image — not a
+  repeat of the article title.
 
-Return ONLY a valid JSON array of {num_imagens} strings, nothing else.
-Example: ["prompt one", "prompt two"]
+Return ONLY a valid JSON array of {num_imagens} objects, nothing else.
+Example: [{{"prompt": "...", "legenda": "..."}}, {{"prompt": "...", "legenda": "..."}}]
 """
     raw = pedir_ia_groq(prompt, temperatura=0.6)
-    match = re.search(r'\[.*?\]', raw, re.DOTALL)
+    match = re.search(r'\[.*\]', raw, re.DOTALL)
     if match:
         try:
-            prompts = json.loads(match.group())
-            if isinstance(prompts, list):
-                return [str(p).strip() for p in prompts[:num_imagens]]
+            itens = json.loads(match.group())
+            if isinstance(itens, list) and all(isinstance(i, dict) for i in itens):
+                resultado = [
+                    {"prompt": str(i.get("prompt", "")).strip(),
+                     "legenda": str(i.get("legenda", "")).strip()}
+                    for i in itens[:num_imagens]
+                ]
+                if all(r["prompt"] for r in resultado):
+                    return resultado
         except Exception:
             pass
-    linhas = [l.strip().strip('"').strip("'") for l in raw.split('\n') if l.strip()]
-    return linhas[:num_imagens] if linhas else [f"{bicho} cute pet photography 8K"]
+    # fallback: sem legenda estruturada
+    return [{"prompt": f"{bicho} cute pet photography 8K, scene {i+1}", "legenda": ""}
+            for i in range(num_imagens)]
 
 
 # ─────────────────────────────────────────────
@@ -366,6 +375,30 @@ def hospedar_imgbb(b64_data, nome="pets_img"):
     return url
 
 
+def verificar_url_imagem(url, tentativas=5, espera_segundos=2):
+    """Confirma que a URL da imagem já está de fato acessível antes de
+    usar no post. O ImgBB (e às vezes o Pollinations) podem levar alguns
+    segundos pra propagar no CDN deles — sem essa checagem, o post é
+    publicado com um link que ainda dá 404/timeout, e só passa a
+    funcionar quando o Blogger recarrega o conteúdo depois (ex: ao
+    clicar em 'Atualizar')."""
+    for tentativa in range(1, tentativas + 1):
+        try:
+            resp = requests.head(url, timeout=10, allow_redirects=True)
+            if resp.status_code == 200:
+                return True
+            # alguns hosts não respondem bem a HEAD, tenta GET como fallback
+            if resp.status_code in (403, 405):
+                resp = requests.get(url, timeout=10, stream=True)
+                if resp.status_code == 200:
+                    return True
+        except requests.RequestException:
+            pass
+        if tentativa < tentativas:
+            time.sleep(espera_segundos)
+    return False
+
+
 # ─────────────────────────────────────────────
 #  FALLBACK — Openverse (imagens com licença CC)
 # ─────────────────────────────────────────────
@@ -393,17 +426,24 @@ def buscar_imagens_openverse(palavra_chave, quantidade=3):
 # ─────────────────────────────────────────────
 #  HTML DE IMAGEM (Blogger)
 # ─────────────────────────────────────────────
-def html_imagem_blogger(src, alt_title, height=360, width=640):
+def html_imagem_blogger(src, alt_title, legenda="", height=360, width=640):
     """src deve ser sempre uma URL pública (ImgBB, Openverse ou data URI como último recurso)."""
+    legenda_html = ""
+    if legenda:
+        legenda_html = (
+            f'<div style="font-size:13px;color:#777;font-style:italic;'
+            f'text-align:center;margin-top:6px;margin-bottom:20px;">{legenda}</div>'
+        )
     return (
         '<table align="center" cellpadding="0" cellspacing="0" '
         'class="tr-caption-container" '
-        'style="margin-left:auto;margin-right:auto;margin-bottom:24px;">'
+        'style="margin-left:auto;margin-right:auto;margin-bottom:8px;">'
         '<tbody><tr><td style="text-align:center;">'
-        f'<img alt="{alt_title}" border="0" height="{height}" src="{src}" '
-        f'title="{alt_title}" width="{width}" '
+        f'<img alt="{legenda or alt_title}" border="0" height="{height}" src="{src}" '
+        f'title="{legenda or alt_title}" width="{width}" '
         'style="max-width:100%;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.12);" />'
-        '</td></tr></tbody></table><br />'
+        '</td></tr></tbody></table>'
+        f'{legenda_html}'
     )
 
 
@@ -411,32 +451,42 @@ def html_imagem_blogger(src, alt_title, height=360, width=640):
 #  ORQUESTRADOR DE IMAGENS
 #  Cascata: Pollinations.ai → ImgBB → (fallback) Openverse
 # ─────────────────────────────────────────────
-def obter_imagens_html(prompts, titulo, img_en_fallback):
+def obter_imagens_html(itens_imagem, titulo, img_en_fallback):
     """
-    Para cada prompt:
+    itens_imagem: lista de dicts {'prompt':..., 'legenda':...}
+    Para cada item:
       1. Gera imagem via Pollinations.ai (b64)
       2. Hospeda no ImgBB → URL pública limpa para o Blogger
-      3. Se Pollinations.ai falhar: tenta Openverse (URL direta, sem ImgBB)
-      4. Se ImgBB falhar mas a geração ok: usa data URI base64 como último recurso
+      3. Confirma que a URL já está acessível antes de usar (evita imagem
+         quebrada até alguém dar "Atualizar" manualmente no post)
+      4. Se Pollinations.ai falhar: tenta Openverse (URL direta, sem ImgBB)
+      5. Se ImgBB falhar/não propagar: usa data URI base64 como último recurso
     """
     imagens_html    = []
     openverse_cache = None
 
-    for i, prompt_img in enumerate(prompts):
+    for i, item in enumerate(itens_imagem):
+        prompt_img = item["prompt"]
+        legenda = item.get("legenda", "")
         src = None
 
         # ── Tentativa 1: Pollinations.ai + ImgBB ──────────
         try:
-            print(f"  🖼️  [{i+1}/{len(prompts)}] Gerando via Pollinations.ai...")
+            print(f"  🖼️  [{i+1}/{len(itens_imagem)}] Gerando via Pollinations.ai...")
             b64 = gerar_imagem_worker_b64(prompt_img, ratio="16:9")
 
             try:
                 nome_img = f"pets_{titulo[:40].replace(' ','_')}_{i+1}"
-                src = hospedar_imgbb(b64, nome=nome_img)
-                print(f"  ✅ Pollinations.ai + ImgBB OK → {src[:60]}...")
+                url_imgbb = hospedar_imgbb(b64, nome=nome_img)
+                print(f"  ⏳ Confirmando que a URL do ImgBB já está acessível...")
+                if verificar_url_imagem(url_imgbb):
+                    src = url_imgbb
+                    print(f"  ✅ URL confirmada: {src[:60]}...")
+                else:
+                    raise ValueError("URL do ImgBB não respondeu 200 depois de várias tentativas.")
             except Exception as e_imgbb:
-                # ImgBB falhou mas temos o b64 — usa data URI como backup
-                print(f"  ⚠️  ImgBB falhou ({e_imgbb}). Usando data URI como backup...")
+                # ImgBB falhou/não propagou mas temos o b64 — usa data URI como backup
+                print(f"  ⚠️  ImgBB falhou/não propagou ({e_imgbb}). Usando data URI como backup...")
                 src = f"data:image/png;base64,{b64}"
 
         # ── Tentativa 2: Openverse (Pollinations.ai falhou) ─
@@ -444,15 +494,15 @@ def obter_imagens_html(prompts, titulo, img_en_fallback):
             print(f"  ⚠️  Pollinations.ai falhou ({e_ia}). Buscando no Openverse...")
             if openverse_cache is None:
                 openverse_cache = buscar_imagens_openverse(
-                    img_en_fallback, quantidade=len(prompts)
+                    img_en_fallback, quantidade=len(itens_imagem)
                 )
             src = openverse_cache[i % len(openverse_cache)]
             print(f"  🔄 Openverse: {src[:60]}...")
 
         altura = 420 if i == 0 else 300
-        imagens_html.append(html_imagem_blogger(src, titulo, height=altura))
+        imagens_html.append(html_imagem_blogger(src, titulo, legenda=legenda, height=altura))
 
-        if i < len(prompts) - 1:
+        if i < len(itens_imagem) - 1:
             time.sleep(INTERVALO_POLLINATIONS)  # respeita o rate limit do Pollinations.ai
 
     return imagens_html
@@ -546,10 +596,10 @@ if __name__ == "__main__":
     print(f"✏️  Título: {titulo}")
 
     print(f"🖊️  Gerando prompts de imagem...")
-    prompts = gerar_prompts_imagens(nome_bicho, titulo, num_imagens)
+    itens_imagem = gerar_prompts_imagens(nome_bicho, titulo, num_imagens)
 
     print(f"🖼️  Obtendo {num_imagens} imagens...")
-    imagens_html = obter_imagens_html(prompts, titulo, img_en)
+    imagens_html = obter_imagens_html(itens_imagem, titulo, img_en)
 
     print(f"📖 Escrevendo artigo sobre {nome_bicho}...")
     corpo = gerar_artigo_cuidados(nome_bicho, num_imagens)
