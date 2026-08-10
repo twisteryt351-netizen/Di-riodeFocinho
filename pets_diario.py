@@ -358,7 +358,7 @@ def hospedar_imgbb(b64_data, nome="pets_img"):
         raise ValueError("IMGBB_API_KEY não configurada.")
 
     resp = requests.post(
-        "https://api.imgbb.com/1/image",
+        "https://api.imgbb.com/1/upload",
         data={
             "key":    IMGBB_API_KEY,
             "image":  b64_data,
