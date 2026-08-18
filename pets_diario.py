@@ -36,7 +36,7 @@ if not IMGBB_API_KEY:
     print("⚠️  IMGBB_API_KEY não configurada — imagens geradas via IA serão embed como base64 (fallback).")
 
 groq_client = Groq(api_key=GROQ_API_KEY)
-MODELO_IA   = "llama-3.3-70b-versatile"
+MODELO_IA   = "openai/gpt-oss-120b"
 
 # ─────────────────────────────────────────────
 #  LISTA DE ANIMAIS — 30 opções variadas
